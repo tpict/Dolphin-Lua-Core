@@ -6,6 +6,8 @@
 #include <lua.hpp>
 #include <lua.h>
 #include <luaconf.h>
+#include <wx/app.h>
+#include <wx/thread.h>
 
 #include "Common/ChunkFile.h"
 #include "Common/CommonPaths.h"
@@ -39,8 +41,33 @@
 #include "VideoCommon/Statistics.h"
 #include "VideoCommon/VideoConfig.h"
 #include "Core/Host.h"
+#include "DolphinWX/Main.h"
+#include "DolphinWX/Frame.h"
 
 //Lua Functions (C)
+int ExitDolphin(lua_State* L)
+{
+  int argc = lua_gettop(L);
+  /* wxPostEvent(CFrame::OnQuit, wxCommandEvent(wxEVT_MENU, wxID_EXIT)); */
+  SConfig::GetInstance().bConfirmStop = false;
+  wxPostEvent(wxGetApp().GetCFrame()->GetEventHandler(), wxCommandEvent(wxEVT_MENU, wxID_EXIT));
+  return 0;
+}
+
+int SetDumpFrames(lua_State* L)
+{
+	BOOL Enable = lua_toboolean(L, 1);
+    SConfig::GetInstance().m_DumpFrames = Enable;
+    return 0;
+}
+
+int SetDumpAudio(lua_State* L)
+{
+	BOOL Enable = lua_toboolean(L, 1);
+    SConfig::GetInstance().m_DumpAudio = Enable;
+    return 0;
+}
+
 int ReadValue8(lua_State* L)
 {
 	int argc = lua_gettop(L);
@@ -720,6 +747,11 @@ namespace Lua
 	static void RegisterGeneralLuaFunctions(lua_State* luaState)
 	{
 		//Make C functions available to Lua programs
+		lua_register(luaState, "ExitDolphin", ExitDolphin);
+
+		lua_register(luaState, "SetDumpFrames", SetDumpFrames);
+		lua_register(luaState, "SetDumpAudio", SetDumpAudio);
+
 		lua_register(luaState, "ReadValue8", ReadValue8);
 		lua_register(luaState, "ReadValue16", ReadValue16);
 		lua_register(luaState, "ReadValue32", ReadValue32);
@@ -759,8 +791,7 @@ namespace Lua
 
 		//Auto launch Scripts that start with _
 
-
-	    std::vector<std::string> rFilenames = DoFileSearch({".lua"}, {SYSDATA_DIR "/Scripts"});
+	    std::vector<std::string> rFilenames = DoFileSearch({".lua"}, {File::GetUserPath(D_SCRIPTS_IDX)});
 
 		if (rFilenames.size() > 0)
 		{
@@ -861,7 +892,7 @@ namespace Lua
 				//Unique to normal Scripts
 				lua_register(it->luaState, "CancelScript", CancelScript);
 
-				std::string file = SYSDATA_DIR "/Scripts/" + it->fileName;
+				std::string file = File::GetUserPath(D_SCRIPTS_IDX) + it->fileName;
 
 				status = luaL_dofile(it->luaState, file.c_str());
 

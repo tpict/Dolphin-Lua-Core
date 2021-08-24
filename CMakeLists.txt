@@ -441,6 +441,8 @@ add_definitions(-D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE)
 include(CheckLib)
 include(CheckCXXSourceRuns)
 
+
+set(OpenGL_GL_PREFERENCE "GLVND")
 include(FindOpenGL)
 if (OPENGL_GL)
 	include_directories(${OPENGL_INCLUDE_DIR})
